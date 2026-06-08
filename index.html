@@ -1,0 +1,278 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>TechShare Real-Time - PC & Android</title>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"></script>
+    <script src="https://unpkg.com/peerjs@1.5.2/dist/peerjs.min.js"></script>
+    <style>
+        :root {
+            --glow-color: #00f3ff;
+            --bg-color: #03001e;
+            --panel-bg: rgba(10, 15, 30, 0.85);
+        }
+
+        body, html {
+            margin: 0;
+            padding: 0;
+            width: 100%;
+            height: 100%;
+            font-family: 'Segoe UI', Arial, sans-serif;
+            background-color: var(--bg-color);
+            color: #fff;
+            overflow-x: hidden;
+        }
+
+        /* Fondo tecnológico */
+        .tech-bg {
+            position: fixed;
+            top: 0; left: 0; width: 100%; height: 100%;
+            background: radial-gradient(circle at 50% 50%, rgba(0, 243, 255, 0.08) 0%, transparent 70%);
+            z-index: -1;
+        }
+        .tech-bg::before {
+            content: ""; position: absolute; width: 100%; height: 100%;
+            background-image: radial-gradient(rgba(0, 243, 255, 0.15) 1px, transparent 0);
+            background-size: 30px 30px;
+            opacity: 0.6;
+        }
+
+        /* Contenedor responsivo */
+        .container {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            padding: 20px;
+            min-height: 100vh;
+            box-sizing: border-box;
+        }
+
+        h1 {
+            font-size: 2rem;
+            text-transform: uppercase;
+            letter-spacing: 3px;
+            text-shadow: 0 0 10px var(--glow-color);
+            margin-bottom: 5px;
+            text-align: center;
+        }
+
+        .status-bar {
+            font-family: monospace;
+            color: var(--glow-color);
+            margin-bottom: 20px;
+            background: rgba(0,0,0,0.4);
+            padding: 5px 15px;
+            border-radius: 20px;
+            border: 1px solid rgba(0, 243, 255, 0.2);
+        }
+
+        .layout {
+            display: flex;
+            flex-direction: row;
+            gap: 20px;
+            width: 100%;
+            max-width: 1200px;
+            justify-content: center;
+        }
+
+        /* Paneles */
+        .panel {
+            background: var(--panel-bg);
+            border: 1px solid rgba(0, 243, 255, 0.3);
+            border-radius: 12px;
+            padding: 25px;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            box-shadow: 0 0 20px rgba(0, 243, 255, 0.1);
+        }
+
+        /* Vista PC */
+        #pc-view { flex: 1; max-width: 350px; text-align: center; }
+        #monitor-view { flex: 2; position: relative; min-height: 400px; width: 100%; justify-content: center;}
+
+        /* Vista Móvil (Oculta en PC al inicio) */
+        #mobile-view {
+            display: none;
+            width: 100%;
+            max-width: 400px;
+            text-align: center;
+        }
+
+        .qr-wrapper {
+            background: white;
+            padding: 15px;
+            border-radius: 8px;
+            margin: 20px 0;
+            display: inline-block;
+        }
+
+        /* Botón Estilo Cyber */
+        .btn-cyber {
+            background: transparent;
+            border: 2px solid var(--glow-color);
+            color: var(--glow-color);
+            padding: 15px 30px;
+            font-size: 1rem;
+            font-weight: bold;
+            text-transform: uppercase;
+            letter-spacing: 1px;
+            border-radius: 4px;
+            cursor: pointer;
+            box-shadow: 0 0 15px rgba(0, 243, 255, 0.2);
+            transition: all 0.2s;
+            width: 100%;
+        }
+        .btn-cyber:hover {
+            background: var(--glow-color);
+            color: #000;
+            box-shadow: 0 0 25px var(--glow-color);
+        }
+
+        video {
+            width: 100%;
+            height: 100%;
+            max-height: 70vh;
+            object-fit: contain;
+            background: #000;
+            border-radius: 8px;
+            display: none;
+        }
+
+        .placeholder {
+            text-align: center;
+            color: rgba(0, 243, 255, 0.4);
+            font-family: monospace;
+        }
+
+        /* Adaptación para pantallas de Celular */
+        @media (max-width: 768px) {
+            .layout { flex-direction: column; align-items: center; }
+            #pc-view { display: none; }
+            #monitor-view { display: none; }
+            #mobile-view { display: flex; }
+        }
+    </style>
+</head>
+<body>
+
+    <div class="tech-bg"></div>
+
+    <div class="container">
+        <h1>TechShare P2P</h1>
+        <div class="status-bar" id="status">Iniciando sistema de enlace...</div>
+
+        <div class="layout">
+            <div class="panel" id="pc-view">
+                <h3>ESCANEAR DESDE ANDROID</h3>
+                <p>Usa la cámara de tu celular para escanear este código y transmitir tu pantalla aquí.</p>
+                <div class="qr-wrapper">
+                    <div id="qrcode"></div>
+                </div>
+            </div>
+
+            <div class="panel" id="monitor-view">
+                <div class="placeholder" id="placeholder">
+                    <p>[ ESPERANDO TRANSMISIÓN DESDE CELULAR ANDROID... ]</p>
+                </div>
+                <video id="remoteVideo" autoplay playsinline></video>
+            </div>
+
+            <div class="panel" id="mobile-view">
+                <h3>TRANSMISOR ANDROID</h3>
+                <p style="color: #8a99ad;">Estás conectado a la central. Presiona el botón de abajo, acepta el permiso de Android ("Comenzar ahora") y tu pantalla se verá en la computadora.</p>
+                <button class="btn-cyber" id="shareBtn">COMPARTIR MI PANTALLA</button>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        const statusDiv = document.getElementById('status');
+        const qrcodeDiv = document.getElementById('qrcode');
+        const remoteVideo = document.getElementById('remoteVideo');
+        const placeholder = document.getElementById('placeholder');
+        const shareBtn = document.getElementById('shareBtn');
+
+        // Detectar si el enlace tiene un ID de sala (parámetro ?room=XXXX)
+        const urlParams = new URLSearchParams(window.location.search);
+        const roomId = urlParams.get('room');
+
+        // Crear una instancia de PeerJS apuntando a sus servidores públicos gratuitos
+        const peer = new Peer();
+
+        peer.on('open', (id) => {
+            if (!roomId) {
+                // MODO MONITOR (PC): Generamos el código QR con el enlace de esta misma página + nuestro ID único
+                statusDiv.innerText = "SISTEMA ONLINE: Esperando escaneo...";
+                const shareUrl = window.location.href.split('?')[0] + "?room=" + id;
+                
+                // Limpiar QR anterior si existe y crear el nuevo
+                qrcodeDiv.innerHTML = "";
+                new QRCode(qrcodeDiv, {
+                    text: shareUrl,
+                    width: 200,
+                    height: 200
+                });
+            } else {
+                // MODO CELULAR: Nos saltamos el QR y mostramos los controles de transmisión
+                statusDiv.innerText = "CONECTADO A LA CENTRAL";
+            }
+        });
+
+        // --- LÓGICA PARA LA COMPUTADORA (RECIBIR PANTALLA) ---
+        if (!roomId) {
+            peer.on('call', (call) => {
+                statusDiv.innerText = "RECIBIENDO TRANSMISIÓN EN VIVO...";
+                call.answer(); // Responder la llamada sin enviar video de vuelta
+                
+                call.on('stream', (remoteStream) => {
+                    placeholder.style.display = 'none';
+                    remoteVideo.style.display = 'block';
+                    remoteVideo.srcObject = remoteStream;
+                });
+            });
+        } 
+        
+        // --- LÓGICA PARA EL CELULAR ANDROID (ENVIAR PANTALLA) ---
+        else {
+            shareBtn.addEventListener('click', async () => {
+                try {
+                    // Solicita la captura de pantalla nativa de Android
+                    const stream = await navigator.mediaDevices.getDisplayMedia({
+                        video: {
+                            width: { ideal: 1280 },
+                            height: { ideal: 720 },
+                            frameRate: { ideal: 24 }
+                        },
+                        audio: false
+                    });
+
+                    statusDiv.innerText = "TRANSMITIENDO PANTALLA...";
+                    shareBtn.innerText = "TRANSMITIENDO EN VIVO";
+                    shareBtn.disabled = true;
+                    shareBtn.style.opacity = 0.5;
+
+                    // Llamar a la PC (roomId) y enviarle la señal de video de la pantalla
+                    peer.call(roomId, stream);
+
+                    // Si el usuario detiene la compartición desde la barra de notificaciones de Android
+                    stream.getVideoTracks()[0].onended = () => {
+                        alert("Transmisión finalizada.");
+                        window.location.reload();
+                    };
+
+                } catch (err) {
+                    console.error(err);
+                    alert("Error: Para transmitir debes otorgar los permisos de captura de pantalla en Android.");
+                }
+            });
+        }
+
+        peer.on('error', (err) => {
+            console.error(err);
+            statusDiv.innerText = "Error de conexión. Reintentando...";
+        });
+    </script>
+</body>
+</html>
